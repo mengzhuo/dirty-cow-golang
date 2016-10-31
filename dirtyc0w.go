@@ -6,11 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 	"syscall"
 )
 
 const (
-	TryTimes = 100000000
+	TryTimes = 10000000
 )
 
 var (
@@ -30,54 +31,54 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	size := stat.Size()
 	/*
 		void *mmap(void *addr, size_t length, int prot, int flags,
 				   int fd, off_t offset);
 	*/
-
-	MAP, _, _ = syscall.Syscall6(
-		syscall.SYS_MMAP,
-		uintptr(1),
+	var r1 uintptr
+	var eo syscall.Errno
+	var null uintptr
+	MAP, r1, eo = syscall.Syscall6(
+		syscall.SYS_MMAP2,
+		null,
 		uintptr(stat.Size()),
 		uintptr(syscall.PROT_READ),
 		uintptr(syscall.MAP_PRIVATE),
 		file.Fd(),
 		0)
-	go madvise(int(size))
+
+	fmt.Printf("Map %x %v %v\n", MAP, r1, eo)
+
+	count := runtime.NumCPU()
+	for i := 0; i < count/2; i++ {
+		go madvise()
+	}
 	selfMem()
 }
 
-func madvise(size int) {
-	var err error
-	sl := struct {
-		addr uintptr
-		len  int
-		cap  int
-	}{MAP, size, size}
-	/*
-		for i := 0; i < TryTimes; i++ {
-			err = syscall.Madvise(*(*[]byte)(unsafe.Pointer(&sl)), syscall.MADV_DONTNEED)
-		}
-	*/
+func madvise() {
 
-	r1, r2, eo := syscall.Syscall(syscall.SYS_MADVISE, MAP, uintptr(100), syscall.MADV_DONTNEED)
-
+	var r1, r2 uintptr
+	var eo syscall.Errno
+	for i := 0; i < TryTimes; i++ {
+		r1, r2, eo = syscall.Syscall(syscall.SYS_MADVISE, MAP, uintptr(100), syscall.MADV_DONTNEED)
+	}
 	fmt.Println("madvise", r1, r2, eo)
 }
 
 func selfMem() {
+
 	f, err := os.OpenFile("/proc/self/mem", syscall.O_RDWR, 0)
 	if err != nil {
 		panic(err)
 	}
 
 	con := []byte(*content)
-	c := 0
+	var r1, r2 uintptr
+	var eo syscall.Errno
 	for i := 0; i < TryTimes; i++ {
-		syscall.Syscall(syscall.SYS_LSEEK, f.Fd(), MAP, uintptr(os.SEEK_SET))
-		n, _ := f.Write(con)
-		c += n
+		r1, r2, eo = syscall.Syscall(syscall.SYS_LSEEK, f.Fd(), MAP, uintptr(os.SEEK_SET))
+		f.Write(con)
 	}
-	fmt.Printf("Self Mem:%d", c)
+	fmt.Printf("Self Mem:%x %v %v", r1, r2, eo)
 }
