@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"syscall"
-	"unsafe"
 )
 
 const (
@@ -56,10 +55,15 @@ func madvise(size int) {
 		len  int
 		cap  int
 	}{MAP, size, size}
-	for i := 0; i < TryTimes; i++ {
-		err = syscall.Madvise(*(*[]byte)(unsafe.Pointer(&sl)), syscall.MADV_DONTNEED)
-	}
-	fmt.Println("madvise", err)
+	/*
+		for i := 0; i < TryTimes; i++ {
+			err = syscall.Madvise(*(*[]byte)(unsafe.Pointer(&sl)), syscall.MADV_DONTNEED)
+		}
+	*/
+
+	r1, r2, eo := syscall.Syscall(syscall.SYS_MADVISE, MAP, uintptr(100), syscall.MADV_DONTNEED)
+
+	fmt.Println("madvise", r1, r2, eo)
 }
 
 func selfMem() {
