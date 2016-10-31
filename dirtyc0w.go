@@ -1,4 +1,4 @@
-// Not work, why?
+// NOTE: you should change SYS_MMAP into SYS_MMAP2 if you are running on arm
 
 package main
 
