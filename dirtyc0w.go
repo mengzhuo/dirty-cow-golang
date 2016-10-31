@@ -39,7 +39,7 @@ func main() {
 	var eo syscall.Errno
 	var null uintptr
 	MAP, r1, eo = syscall.Syscall6(
-		syscall.SYS_MMAP2, // NOTE: arm linux use SYS_MMAP2 x86 use SYS_MMAP
+		syscall.SYS_MMAP, // NOTE: arm linux use SYS_MMAP2 x86 use SYS_MMAP
 		null,
 		uintptr(stat.Size()),
 		uintptr(syscall.PROT_READ),
